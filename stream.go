@@ -1,16 +1,55 @@
 package main
 
 import (
+	"bytes"
+	"fmt"
 	"log"
+	"os"
 	"time"
 
+	"github.com/deepch/vdk/codec/h264parser"
 	"github.com/deepch/vdk/format/rtsp"
 )
 
+func dateToStringSequenceID(datetime time.Time) string {
+	// now.Year()+now.Month()+now.Day()+now.Hour()+now.Minute()+now.Second()
+	var stringGDateTime = fmt.Sprintf("%02d", datetime.Year()) +
+		fmt.Sprintf("%02d", datetime.Month()) +
+		fmt.Sprintf("%02d", datetime.Day()) +
+		fmt.Sprintf("%02d", datetime.Hour()) +
+		fmt.Sprintf("%02d", datetime.Minute()) +
+		fmt.Sprintf("%02d", datetime.Second())
+	return stringGDateTime
+}
+
+func getNewStreamFileName(name string) string {
+	var baseName = "stream_" + name
+	var sequenceTime = dateToStringSequenceID(time.Now())
+
+	return baseName + "_" + sequenceTime + ".flv"
+}
+func getNewStreamFilePath(name string) string {
+	streamRecordDirEnv, streamRecordDirErr := os.LookupEnv("STREAMDIR")
+	if !streamRecordDirErr || streamRecordDirEnv == "" {
+		println("using default port config :80")
+
+		streamRecordDirEnv = "/streams"
+	}
+
+	return streamRecordDirEnv + "/" + getNewStreamFileName(name)
+}
 func serveStreams() {
+
 	for k, v := range Config.Streams {
 		go func(name, url string) {
 			for {
+
+				f, err := os.OpenFile(getNewStreamFilePath(name), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+				if err != nil {
+					panic(err)
+				}
+
+				defer f.Close()
 				log.Println(name, "connect", url)
 				rtsp.DebugRtsp = true
 				session, err := rtsp.Dial(url)
@@ -31,13 +70,30 @@ func serveStreams() {
 					time.Sleep(5 * time.Second)
 					continue
 				}
+
 				Config.coAd(name, codec)
 				for {
+					// if(time.Now(){
+					// 	f, err := os.OpenFile(getNewStreamFilePath(name), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+
+					// }
 					pkt, err := session.ReadPacket()
 					if err != nil {
 						log.Println(name, err)
 						break
 					}
+					var chunk []byte
+					sps := codec[0].(h264parser.CodecData).SPS()
+					pps := codec[0].(h264parser.CodecData).PPS()
+					if pkt.IsKeyFrame {
+						chunk = append([]byte{0, 0, 0, 1}, bytes.Join([][]byte{sps, pps, pkt.Data[4:]}, []byte{0, 0, 0, 1})...)
+					} else {
+						chunk = append([]byte{0, 0, 0, 1}, pkt.Data[4:]...)
+					}
+
+					f.Write(chunk)
+
+					// log.Println(name, "test", sps)
 					Config.cast(name, pkt)
 				}
 				err = session.Close()
@@ -50,5 +106,12 @@ func serveStreams() {
 		}(k, v.URL)
 	}
 	log.Println("all streamings started")
+
+	for {
+		log.Println("check streaming")
+
+		time.Sleep(5 * time.Second)
+
+	}
 
 }

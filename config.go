@@ -58,6 +58,9 @@ func loadConfig() *ConfigST {
 }
 
 func (element *ConfigST) cast(uuid string, pck av.Packet) {
+
+	// log.Println("test")
+
 	for _, v := range element.Streams[uuid].Cl {
 		if len(v.c) < cap(v.c) {
 			v.c <- pck
@@ -84,6 +87,7 @@ func (element *ConfigST) clAd(suuid string) (string, chan av.Packet) {
 	cuuid := pseudoUUID()
 	ch := make(chan av.Packet, 100)
 	element.Streams[suuid].Cl[cuuid] = viwer{c: ch}
+	log.Println("test")
 	return cuuid, ch
 }
 
