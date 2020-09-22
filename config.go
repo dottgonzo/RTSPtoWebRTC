@@ -15,13 +15,17 @@ var Config = loadConfig()
 
 //ConfigST struct
 type ConfigST struct {
-	Server  ServerST            `json:"server"`
 	Streams map[string]StreamST `json:"streams"`
+}
+
+//ServerEnv struct
+type ServerEnv struct {
+	HTTPPort int
 }
 
 //ServerST struct
 type ServerST struct {
-	HTTPPort string `json:"http_port"`
+	HTTPPort string
 }
 
 //StreamST struct
@@ -49,7 +53,8 @@ func loadConfig() *ConfigST {
 		v.Cl = make(map[string]viwer)
 		tmp.Streams[i] = v
 	}
-	return &tmp
+	var co = ConfigST{Streams: tmp.Streams}
+	return &co
 }
 
 func (element *ConfigST) cast(uuid string, pck av.Packet) {

@@ -49,4 +49,6 @@ func serveStreams() {
 			}
 		}(k, v.URL)
 	}
+	log.Println("all streamings started")
+
 }

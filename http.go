@@ -6,6 +6,7 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"os"
 	"sort"
 	"strings"
 	"time"
@@ -19,13 +20,22 @@ import (
 )
 
 func serveHTTP() {
+	httpPortEnv, httpPortLookupErr := os.LookupEnv("HTTPPORT")
+	if !httpPortLookupErr || httpPortEnv == "" {
+		println("using default port config :80")
+
+		httpPortEnv = ":80"
+	} else {
+		httpPortEnv = ":" + httpPortEnv
+	}
+
 	router := gin.Default()
 	router.LoadHTMLGlob("web/templates/*")
 	router.GET("/", func(c *gin.Context) {
 		fi, all := Config.list()
 		sort.Strings(all)
 		c.HTML(http.StatusOK, "index.tmpl", gin.H{
-			"port":     Config.Server.HTTPPort,
+			"port":     httpPortEnv,
 			"suuid":    fi,
 			"suuidMap": all,
 			"version":  time.Now().String(),
@@ -35,7 +45,7 @@ func serveHTTP() {
 		_, all := Config.list()
 		sort.Strings(all)
 		c.HTML(http.StatusOK, "index.tmpl", gin.H{
-			"port":     Config.Server.HTTPPort,
+			"port":     httpPortEnv,
 			"suuid":    c.Param("suuid"),
 			"suuidMap": all,
 			"version":  time.Now().String(),
@@ -60,7 +70,7 @@ func serveHTTP() {
 		}
 	})
 	router.StaticFS("/static", http.Dir("web/static"))
-	err := router.Run(Config.Server.HTTPPort)
+	err := router.Run(httpPortEnv)
 	if err != nil {
 		log.Fatalln("Start HTTP Server error", err)
 	}
