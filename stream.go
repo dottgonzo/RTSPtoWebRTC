@@ -85,9 +85,9 @@ func serveStreams() {
 					// pkt.Time = time.Duration(codec[0]) * time.Second / time.Duration(stream.timeScale())
 
 					var chunk []byte
-					sps := codec[0].(h264parser.CodecData).SPS()
-					pps := codec[0].(h264parser.CodecData).PPS()
+
 					if pkt.IsKeyFrame {
+
 						if pkt.Time.Seconds() > 0 && int(pkt.Time.Seconds())%1800 == 0 {
 							f, err = os.OpenFile(getNewStreamFilePath(name), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 							if err != nil {
@@ -96,7 +96,8 @@ func serveStreams() {
 							defer f.Close()
 
 						}
-
+						sps := codec[0].(h264parser.CodecData).SPS()
+						pps := codec[0].(h264parser.CodecData).PPS()
 						chunk = append([]byte{0, 0, 0, 1}, bytes.Join([][]byte{sps, pps, pkt.Data[4:]}, []byte{0, 0, 0, 1})...)
 					} else {
 						chunk = append([]byte{0, 0, 0, 1}, pkt.Data[4:]...)
